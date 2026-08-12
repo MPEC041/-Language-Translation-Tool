@@ -1,0 +1,547 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Echoline — Voice & Text Translator</title>
+<style>
+  :root{
+    --bg: #0f1220;
+    --panel: #161a2e;
+    --panel-2: #1d2238;
+    --ink: #eef0fb;
+    --ink-dim: #9aa0c3;
+    --amber: #f2a541;
+    --teal: #3fd3c6;
+    --line: #2a3050;
+    --radius: 14px;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:
+      radial-gradient(1200px 600px at 15% -10%, rgba(63,211,198,0.10), transparent 60%),
+      radial-gradient(1000px 500px at 100% 0%, rgba(242,165,65,0.10), transparent 55%),
+      var(--bg);
+    color:var(--ink);
+    font-family: "Inter", "Segoe UI", system-ui, -apple-system, sans-serif;
+    min-height:100vh;
+    display:flex;
+    justify-content:center;
+    padding:48px 20px 80px;
+  }
+  .wrap{ width:100%; max-width:920px; }
+
+  header{ margin-bottom:36px; }
+  .eyebrow{
+    font-family:"JetBrains Mono","Courier New",monospace;
+    font-size:12px;
+    letter-spacing:.14em;
+    text-transform:uppercase;
+    color:var(--teal);
+    display:flex; align-items:center; gap:8px;
+    margin-bottom:14px;
+  }
+  .eyebrow .dot{ width:6px;height:6px;border-radius:50%;background:var(--teal); box-shadow:0 0 8px var(--teal); }
+  h1{
+    font-family:"Space Grotesk","Segoe UI",system-ui,sans-serif;
+    font-weight:700;
+    font-size:clamp(32px, 5vw, 48px);
+    line-height:1.05;
+    margin:0 0 12px;
+    letter-spacing:-0.01em;
+  }
+  h1 span{ color:var(--amber); }
+  header p{ color:var(--ink-dim); max-width:56ch; margin:0; font-size:15.5px; line-height:1.6; }
+
+  .tabs{
+    display:flex; gap:8px; margin:32px 0 20px;
+    border-bottom:1px solid var(--line);
+  }
+  .tab{
+    font-family:"Space Grotesk",sans-serif;
+    background:none; border:none; cursor:pointer;
+    color:var(--ink-dim);
+    font-size:14.5px; font-weight:600;
+    padding:12px 4px; margin-right:22px;
+    border-bottom:2px solid transparent;
+    transition:color .2s, border-color .2s;
+  }
+  .tab:hover{ color:var(--ink); }
+  .tab.active{ color:var(--amber); border-color:var(--amber); }
+
+  .panel{
+    background:var(--panel);
+    border:1px solid var(--line);
+    border-radius:var(--radius);
+    padding:28px;
+    display:none;
+  }
+  .panel.active{ display:block; }
+
+  .lang-row{ display:flex; gap:14px; align-items:center; margin-bottom:20px; flex-wrap:wrap; }
+  .lang-field{ flex:1; min-width:180px; }
+  .lang-field label{
+    display:block; font-size:11.5px; text-transform:uppercase; letter-spacing:.08em;
+    color:var(--ink-dim); margin-bottom:6px; font-family:"JetBrains Mono",monospace;
+  }
+  select, textarea{
+    width:100%;
+    background:var(--panel-2);
+    border:1px solid var(--line);
+    color:var(--ink);
+    border-radius:10px;
+    padding:12px 14px;
+    font-family:"Inter",sans-serif;
+    font-size:14.5px;
+    outline:none;
+  }
+  select:focus, textarea:focus{ border-color:var(--teal); }
+  .swap-btn{
+    width:38px;height:38px; border-radius:50%;
+    background:var(--panel-2); border:1px solid var(--line); color:var(--teal);
+    cursor:pointer; font-size:16px; display:flex; align-items:center; justify-content:center;
+    margin-top:20px; transition:transform .25s ease, border-color .2s;
+  }
+  .swap-btn:hover{ border-color:var(--teal); transform:rotate(180deg); }
+
+  textarea{ min-height:120px; resize:vertical; line-height:1.5; }
+
+  .mic-area{ text-align:center; padding:36px 0 20px; }
+  .mic-btn{
+    width:92px;height:92px; border-radius:50%;
+    background:var(--panel-2);
+    border:2px solid var(--line);
+    cursor:pointer;
+    display:inline-flex; align-items:center; justify-content:center;
+    position:relative;
+    transition:border-color .2s, background .2s;
+  }
+  .mic-btn svg{ width:32px; height:32px; fill:var(--ink); }
+  .mic-btn.listening{ border-color:var(--amber); background:rgba(242,165,65,0.08); }
+  .mic-btn.listening svg{ fill:var(--amber); }
+
+  .wave{
+    display:flex; align-items:flex-end; justify-content:center; gap:4px;
+    height:34px; margin-top:18px;
+  }
+  .wave span{
+    width:4px; border-radius:2px; background:var(--teal);
+    height:6px; opacity:.35;
+    transition:height .15s ease, opacity .15s ease;
+  }
+  .wave.active span{ animation: bounce 900ms ease-in-out infinite; opacity:1; }
+  .wave span:nth-child(1){ animation-delay:0ms; }
+  .wave span:nth-child(2){ animation-delay:90ms; }
+  .wave span:nth-child(3){ animation-delay:180ms; }
+  .wave span:nth-child(4){ animation-delay:270ms; }
+  .wave span:nth-child(5){ animation-delay:360ms; }
+  .wave span:nth-child(6){ animation-delay:270ms; }
+  .wave span:nth-child(7){ animation-delay:180ms; }
+  .wave span:nth-child(8){ animation-delay:90ms; }
+  .wave span:nth-child(9){ animation-delay:0ms; }
+  @keyframes bounce{
+    0%,100%{ height:6px; }
+    50%{ height:30px; }
+  }
+
+  .status{
+    text-align:center; color:var(--ink-dim); font-size:13px;
+    font-family:"JetBrains Mono",monospace; min-height:18px; margin-top:4px;
+  }
+
+  .result-box{
+    background:var(--panel-2); border:1px solid var(--line); border-radius:10px;
+    padding:16px 18px; margin-top:18px; min-height:52px;
+    font-size:15px; line-height:1.55;
+  }
+  .result-box.empty{ color:var(--ink-dim); font-style:italic; }
+  .result-label{
+    font-family:"JetBrains Mono",monospace; font-size:11px; text-transform:uppercase;
+    letter-spacing:.08em; color:var(--teal); margin-bottom:6px; display:block;
+  }
+
+  .btn{
+    font-family:"Space Grotesk",sans-serif;
+    background:var(--amber); color:#1a1300; border:none;
+    padding:12px 22px; border-radius:9px; font-weight:700; font-size:14.5px;
+    cursor:pointer; margin-top:16px; transition:filter .15s;
+  }
+  .btn:hover{ filter:brightness(1.08); }
+  .btn:disabled{ opacity:.5; cursor:not-allowed; }
+
+  footer{ margin-top:34px; color:var(--ink-dim); font-size:12.5px; text-align:center; }
+  footer a{ color:var(--teal); }
+
+  @media (prefers-reduced-motion: reduce){
+    .mic-btn:hover, .wave span, .swap-btn{ animation:none !important; transition:none !important; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div class="eyebrow"><span class="dot"></span> ECHOLINE · BROWSER-BASED TRANSLATOR</div>
+    <h1>Speak or type.<br>Get it back in <span>another tongue</span>.</h1>
+    <p>Runs entirely in your browser. Voice capture uses the Web Speech API; translation calls a free public translation endpoint. No installs, no server.</p>
+  </header>
+
+  <div class="tabs">
+    <button class="tab active" data-tab="voice">Voice → Text</button>
+    <button class="tab" data-tab="text">Text → Text</button>
+    <button class="tab" data-tab="voicevoice">Voice → Voice</button>
+  </div>
+
+  <!-- VOICE TO TEXT PANEL -->
+  <section class="panel active" id="panel-voice">
+    <div class="lang-row">
+      <div class="lang-field">
+        <label for="voice-source">You'll speak in</label>
+        <select id="voice-source"></select>
+      </div>
+      <button class="swap-btn" id="voice-swap" title="Swap languages">⇄</button>
+      <div class="lang-field">
+        <label for="voice-target">Translate to</label>
+        <select id="voice-target"></select>
+      </div>
+    </div>
+
+    <div class="mic-area">
+      <button class="mic-btn" id="mic-btn" title="Click and speak">
+        <svg viewBox="0 0 24 24"><path d="M12 14a3 3 0 0 0 3-3V6a3 3 0 0 0-6 0v5a3 3 0 0 0 3 3zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.92V21h2v-3.08A7 7 0 0 0 19 11h-2z"/></svg>
+      </button>
+      <div class="wave" id="wave">
+        <span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span>
+      </div>
+      <div class="status" id="voice-status">Click the mic and start speaking</div>
+    </div>
+
+    <span class="result-label">Recognized speech</span>
+    <div class="result-box empty" id="voice-transcript">Nothing recorded yet.</div>
+
+    <span  class="result-label" style="margin-top:14px; display:block;">Translation</span>
+    <div class="result-box empty" id="voice-result">Translation will appear here.</div>
+  </section>
+
+  <!-- TEXT TO TEXT PANEL -->
+  <section class="panel" id="panel-text">
+    <div class="lang-row">
+      <div class="lang-field">
+        <label for="text-source">Original language</label>
+        <select id="text-source"></select>
+      </div>
+      <button class="swap-btn" id="text-swap" title="Swap languages">⇄</button>
+      <div class="lang-field">
+        <label for="text-target">Translate to</label>
+        <select id="text-target"></select>
+      </div>
+    </div>
+
+    <label style="display:block; font-size:11.5px; text-transform:uppercase; letter-spacing:.08em; color:var(--ink-dim); margin-bottom:6px; font-family:'JetBrains Mono',monospace;">Your text</label>
+    <textarea id="text-input" placeholder="Type or paste text to translate…"></textarea>
+    <button class="btn" id="text-translate-btn">Translate</button>
+
+    <span class="result-label" style="margin-top:18px; display:block;">Translation</span>
+    <div class="result-box empty" id="text-result">Translation will appear here.</div>
+  </section>
+
+  <!-- VOICE TO VOICE PANEL -->
+  <section class="panel" id="panel-voicevoice">
+    <div class="lang-row">
+      <div class="lang-field">
+        <label for="vv-source">You'll speak in</label>
+        <select id="vv-source"></select>
+      </div>
+      <button class="swap-btn" id="vv-swap" title="Swap languages">⇄</button>
+      <div class="lang-field">
+        <label for="vv-target">Hear it back in</label>
+        <select id="vv-target"></select>
+      </div>
+    </div>
+
+    <div class="mic-area">
+      <button class="mic-btn" id="vv-mic-btn" title="Click and speak">
+        <svg viewBox="0 0 24 24"><path d="M12 14a3 3 0 0 0 3-3V6a3 3 0 0 0-6 0v5a3 3 0 0 0 3 3zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.92V21h2v-3.08A7 7 0 0 0 19 11h-2z"/></svg>
+      </button>
+      <div class="wave" id="vv-wave">
+        <span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span>
+      </div>
+      <div class="status" id="vv-status">Click the mic, speak, and it will be read back translated</div>
+    </div>
+
+    < span class="result-label">Recognized speech</span>
+    <div class="result-box empty" id="vv-transcript">Nothing recorded yet.</div>
+
+    < span class="result-label" style="margin-top:14px; display:block;">Translation (spoken aloud)</span>
+    <div class="result-box empty" id="vv-result">Translation will appear here.</div>
+
+    < button class="btn" id="vv-replay-btn" style="display:none;">🔊 Replay spoken translation</button>
+  </section>
+
+  <footer>
+    Voice capture requires Chrome, Edge, or Safari with microphone access. Built with the Web Speech API + a public translation endpoint. · <a href="#" id="reset-link">Reset</a>
+  </footer>
+</div>
+
+<script>
+// ---------- Shared language list ----------
+const LANGUAGES = [
+  ["en","English"], ["hi","Hindi"], ["es","Spanish"], ["fr","French"],
+  ["de","German"], ["zh","Chinese (Simplified)"], ["ar","Arabic"],
+  ["ja","Japanese"], ["ru","Russian"], ["pt","Portuguese"],
+  ["it","Italian"], ["ko","Korean"], ["bn","Bengali"], ["ur","Urdu"],
+  ["tr","Turkish"], ["vi","Vietnamese"], ["nl","Dutch"], ["pl","Polish"]
+];
+
+function populateSelect(sel, defaultCode){
+  LANGUAGES.forEach(([code, name]) => {
+    const opt = document.createElement("option");
+    opt.value = code; opt.textContent = name;
+    if(code === defaultCode) opt.selected = true;
+    sel.appendChild(opt);
+  });
+}
+
+const voiceSource = document.getElementById("voice-source");
+const voiceTarget = document.getElementById("voice-target");
+const textSource = document.getElementById("text-source");
+const textTarget = document.getElementById("text-target");
+
+const vvSource = document.getElementById("vv-source");
+const vvTarget = document.getElementById("vv-target");
+
+populateSelect(voiceSource, "en");
+populateSelect(voiceTarget, "hi");
+populateSelect(textSource, "en");
+populateSelect(textTarget, "hi");
+populateSelect(vvSource, "en");
+populateSelect(vvTarget, "hi");
+
+document.getElementById("voice-swap").addEventListener("click", () => {
+  [voiceSource.value, voiceTarget.value] = [voiceTarget.value, voiceSource.value];
+});
+document.getElementById("text-swap").addEventListener("click", () => {
+  [textSource.value, textTarget.value] = [textTarget.value, textSource.value];
+});
+document.getElementById("vv-swap").addEventListener("click", () => {
+  [vvSource.value, vvTarget.value] = [vvTarget.value, vvSource.value];
+});
+
+// ---------- Tabs ----------
+document.querySelectorAll(".tab").forEach(tab => {
+  tab.addEventListener("click", () => {
+    document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
+    document.querySelectorAll(".panel").forEach(p => p.classList.remove("active"));
+    tab.classList.add("active");
+    document.getElementById("panel-" + tab.dataset.tab).classList.add("active");
+  });
+});
+
+// ---------- Translation call (MyMemory free API, no key needed) ----------
+async function translateText(text, source, target){
+  const url = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=${source}|${target}`;
+  const res = await fetch(url);
+  if(!res.ok) throw new Error("Translation request failed");
+  const data = await res.json();
+  if(!data || !data.responseData) throw new Error("Unexpected translation response");
+  return data.responseData.translatedText;
+}
+
+function setResult(el, text, isError=false){
+  el.textContent = text;
+  el.classList.toggle("empty", false);
+  el.style.color = isError ? "#ff8080" : "var(--ink)";
+}
+
+// ---------- TEXT TO TEXT ----------
+const textInput = document.getElementById("text-input");
+const textResult = document.getElementById("text-result");
+document.getElementById("text-translate-btn").addEventListener("click", async () => {
+  const value = textInput.value.trim();
+  if(!value){ setResult(textResult, "Type something first.", true); return; }
+  setResult(textResult, "Translating…");
+  try{
+    const translated = await translateText(value, textSource.value, textTarget.value);
+    setResult(textResult, translated);
+  }catch(err){
+    setResult(textResult, "Could not translate right now. " + err.message, true);
+  }
+});
+
+// ---------- VOICE TO TEXT ----------
+const micBtn = document.getElementById("mic-btn");
+const wave = document.getElementById("wave");
+const voiceStatus = document.getElementById("voice-status");
+const voiceTranscript = document.getElementById("voice-transcript");
+const voiceResult = document.getElementById("voice-result");
+
+const SpeechRecognitionAPI = window.SpeechRecognition || window.webkitSpeechRecognition;
+let recognition = null;
+let listening = false;
+
+if(SpeechRecognitionAPI){
+  recognition = new SpeechRecognitionAPI();
+  recognition.continuous = false;
+  recognition.interimResults = false;
+
+  recognition.onstart = () => {
+    listening = true;
+    micBtn.classList.add("listening");
+    wave.classList.add("active");
+    voiceStatus.textContent = "Listening… speak now";
+  };
+
+  recognition.onresult = async (event) => {
+    const transcript = event.results[0][0].transcript;
+    setResult(voiceTranscript, transcript);
+    setResult(voiceResult, "Translating…");
+    try{
+      const translated = await translateText(transcript, voiceSource.value, voiceTarget.value);
+      setResult(voiceResult, translated);
+    }catch(err){
+      setResult(voiceResult, "Could not translate right now. " + err.message, true);
+    }
+  };
+
+  recognition.onerror = (event) => {
+    voiceStatus.textContent = "Error: " + event.error + " — click the mic to try again";
+  };
+
+  recognition.onend = () => {
+    listening = false;
+    micBtn.classList.remove("listening");
+    wave.classList.remove("active");
+    if(voiceStatus.textContent === "Listening… speak now"){
+      voiceStatus.textContent = "Click the mic and start speaking";
+    }
+  };
+
+  micBtn.addEventListener("click", () => {
+    if(listening){ recognition.stop(); return; }
+    recognition.lang = voiceSource.value;
+    try{
+      recognition.start();
+    }catch(e){
+      voiceStatus.textContent = "Could not start microphone: " + e.message;
+    }
+  });
+}else{
+  voiceStatus.textContent = "Your browser doesn't support voice recognition. Try Chrome, Edge, or Safari.";
+  micBtn.disabled = true;
+  micBtn.style.opacity = 0.4;
+  micBtn.style.cursor = "not-allowed";
+}
+
+// ---------- VOICE TO VOICE ----------
+const vvMicBtn = document.getElementById("vv-mic-btn");
+const vvWave = document.getElementById("vv-wave");
+const vvStatus = document.getElementById("vv-status");
+const vvTranscript = document.getElementById("vv-transcript");
+const vvResult = document.getElementById("vv-result");
+const vvReplayBtn = document.getElementById("vv-replay-btn");
+
+let lastSpokenText = "";
+let lastSpokenLang = "en";
+
+function speakTranslation(text, lang){
+  if(!("speechSynthesis" in window)){
+    vvStatus.textContent = "This browser can't speak text aloud (no speechSynthesis support).";
+    return;
+  }
+  window.speechSynthesis.cancel(); // stop anything currently speaking
+  const utterance = new SpeechSynthesisUtterance(text);
+  utterance.lang = lang;
+  utterance.onstart = () => { vvStatus.textContent = "Speaking translation…"; };
+  utterance.onend = () => { vvStatus.textContent = "Done. Click the mic to translate again."; };
+  window.speechSynthesis.speak(utterance);
+  lastSpokenText = text;
+  lastSpokenLang = lang;
+  vvReplayBtn.style.display = "inline-block";
+}
+
+vvReplayBtn.addEventListener("click", () => {
+  if(lastSpokenText) speakTranslation(lastSpokenText, lastSpokenLang);
+});
+
+let vvRecognition = null;
+let vvListening = false;
+
+if(SpeechRecognitionAPI){
+  vvRecognition = new SpeechRecognitionAPI();
+  vvRecognition.continuous = false;
+  vvRecognition.interimResults = false;
+
+  vvRecognition.onstart = () => {
+    vvListening = true;
+    vvMicBtn.classList.add("listening");
+    vvWave.classList.add("active");
+    vvStatus.textContent = "Listening… speak now";
+  };
+
+  vvRecognition.onresult = async (event) => {
+    const transcript = event.results[0][0].transcript;
+    setResult(vvTranscript, transcript);
+    setResult(vvResult, "Translating…");
+    try{
+      const translated = await translateText(transcript, vvSource.value, vvTarget.value);
+      setResult(vvResult, translated);
+      speakTranslation(translated, vvTarget.value);
+    }catch(err){
+      setResult(vvResult, "Could not translate right now. " + err.message, true);
+    }
+  };
+
+  vvRecognition.onerror = (event) => {
+    vvStatus.textContent = "Error: " + event.error + " — click the mic to try again";
+  };
+
+  vvRecognition.onend = () => {
+    vvListening = false;
+    vvMicBtn.classList.remove("listening");
+    vvWave.classList.remove("active");
+    if(vvStatus.textContent === "Listening… speak now"){
+      vvStatus.textContent = "Click the mic, speak, and it will be read back translated";
+    }
+  };
+
+  vvMicBtn.addEventListener("click", () => {
+    if(vvListening){ vvRecognition.stop(); return; }
+    window.speechSynthesis.cancel();
+    vvRecognition.lang = vvSource.value;
+    try{
+      vvRecognition.start();
+    }catch(e){
+      vvStatus.textContent = "Could not start microphone: " + e.message;
+    }
+  });
+}else{
+  vvStatus.textContent = "Your browser doesn't support voice recognition. Try Chrome, Edge, or Safari.";
+  vvMicBtn.disabled = true;
+  vvMicBtn.style.opacity = 0.4;
+  vvMicBtn.style.cursor = "not-allowed";
+}
+
+// ---------- Reset ----------
+document.getElementById("reset-link").addEventListener("click", (e) => {
+  e.preventDefault();
+  textInput.value = "";
+  setResult(textResult, "Translation will appear here.");
+  textResult.classList.add("empty");
+  setResult(voiceTranscript, "Nothing recorded yet.");
+  voiceTranscript.classList.add("empty");
+  setResult(voiceResult, "Translation will appear here.");
+  voiceResult.classList.add("empty");
+  voiceStatus.textContent = "Click the mic and start speaking";
+
+  setResult(vvTranscript, "Nothing recorded yet.");
+  vvTranscript.classList.add("empty");
+  setResult(vvResult, "Translation will appear here.");
+  vvResult.classList.add("empty");
+  vvStatus.textContent = "Click the mic, speak, and it will be read back translated";
+  vvReplayBtn.style.display = "none";
+  if("speechSynthesis" in window) window.speechSynthesis.cancel();
+});
+</script>
+</body>
+</html>
